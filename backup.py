@@ -42,14 +42,16 @@ class Backup:
         self.compare()
         print("")
         print("Updating files...                           ", end="\r")
-        for file in self.fileQueue:
-            print("Updating files... %s                    " % file)
+        index = 1
+        for index, file in enumerate(self.fileQueue):
+            print("Updating file(%s/%s): %s                    " % (str(index+1), str(len(self.fileQueue)), str(file)))
             os_makedirs(os_path.dirname(self.dst + file), exist_ok=True)
             try:
                 shutil_copyfile(self.src + file, self.dst + file)
             except:
                 print("Error copying file: %s" % file)
                 pass
+            index += 1
 
         print("Updated %d files                            " % len(self.fileQueue))
         self.clearQueue()
@@ -81,7 +83,11 @@ class Backup:
         self.fileQueue = []
 
     def getFiles(self, path):
-        return glob.glob(path+'\**\*.*', recursive=self.recursive)
+        files = glob.glob(path+'\**\*.*', recursive=self.recursive)
+        for file in files:
+            if os_path.isdir(file):
+                files.remove(file)
+        return files
     
     
 if __name__ == "__main__":
