@@ -1,22 +1,21 @@
-from os import path as os_path
-from os import makedirs as os_makedirs
+import os
 from shutil import copyfile as shutil_copyfile
 import glob
 import sys
-
 
 class Backup:
     def __init__(self, src, dst, recursive):
         self.setSrc(src)
         self.setDst(dst)
         self.setRecursive(recursive)
-        self.fileQueue = []
+        self.fileSyncQueue = []
+        self.fileDeleteQueue = []
 
     def setSrc(self, src):
         if(not isinstance(src, str)):
             print("Invalid sourcePath. Must be string.")
             sys.exit(1)
-        if(not os_path.exists(src)):
+        if(not os.path.exists(src)):
             print("Invalid sourcePath. Path not found.")
             sys.exit(1)
         self.src = src
@@ -25,7 +24,7 @@ class Backup:
         if(not isinstance(dst, str)):
             print("Invalid destinationPath. Must be string.")
             sys.exit(1)
-        if(not os_path.exists(dst)):
+        if(not os.path.exists(dst)):
             print("Invalid destinationPath. Path not found.")
             sys.exit(1)
         self.dst = dst
@@ -43,9 +42,9 @@ class Backup:
         print("")
         print("Updating files...                           ", end="\r")
         index = 1
-        for index, file in enumerate(self.fileQueue):
-            print("Updating file(%s/%s): %s                    " % (str(index+1), str(len(self.fileQueue)), str(file)))
-            os_makedirs(os_path.dirname(self.dst + file), exist_ok=True)
+        for index, file in enumerate(self.fileSyncQueue):
+            print("Updating file(%s/%s): %s                    " % (str(index+1), str(len(self.fileSyncQueue)), str(file)))
+            os.makedirs(os.path.dirname(self.dst + file), exist_ok=True)
             try:
                 shutil_copyfile(self.src + file, self.dst + file)
             except:
@@ -53,8 +52,24 @@ class Backup:
                 pass
             index += 1
 
-        print("Updated %d files                            " % len(self.fileQueue))
-        self.clearQueue()
+        print("Updated %d files                            " % len(self.fileSyncQueue))
+        self.clearSyncQueue()
+
+        print("Deleting files...                           ", end="\r")
+        index = 1
+        for index, file in enumerate(self.fileDeleteQueue):
+            print("Deleting file(%s/%s): %s                    " % (str(index+1), str(len(self.fileDeleteQueue)), str(file)))
+            try:
+                os.remove(self.dst + file)
+            except:
+                print("Error deleting file: %s" % file)
+                pass
+            index += 1
+        print("Deleted %d files                            " % len(self.fileDeleteQueue))
+        self.clearDeleteQueue()
+        print("Clearing empty directories...               ", end="\r")
+        emptyDirs = self.clearEmptyDirectories()
+        print("Cleared %d empty directories                " % emptyDirs)
 
     def compare(self):
         srcFiles = self.getFiles(self.src)
@@ -68,27 +83,49 @@ class Backup:
         for file in srcFiles:
             print("Comparing files... %s                    " % file)
             if file not in dstFiles:
-                self.pushToQueue(file)
+                self.pushToSyncQueue(file)
             else:
-                srcTime = (int)(os_path.getmtime(self.src + file))
-                dstTime = (int)(os_path.getmtime(self.dst + file))
+                srcTime = (int)(os.path.getmtime(self.src + file))
+                dstTime = (int)(os.path.getmtime(self.dst + file))
                 if srcTime > dstTime:
-                    self.pushToQueue(file)
+                    self.pushToSyncQueue(file)
+
+        # get the files that are in dst but not in src
+        for file in dstFiles:
+            if file not in srcFiles:
+                self.pushToDeleteQueue(file)
             
 
-    def pushToQueue(self, file):
-        self.fileQueue.append(file)
+    def pushToSyncQueue(self, file):
+        self.fileSyncQueue.append(file)
 
-    def clearQueue(self):
-        self.fileQueue = []
+    def clearSyncQueue(self):
+        self.fileSyncQueue = []
+
+    def pushToDeleteQueue(self, file):
+        self.fileDeleteQueue.append(file)
+
+    def clearDeleteQueue(self):
+        self.fileDeleteQueue = []
 
     def getFiles(self, path):
         files = glob.glob(path+'\**\*.*', recursive=self.recursive)
         for file in files:
-            if os_path.isdir(file):
+            if os.path.isdir(file):
                 files.remove(file)
         return files
     
+    def clearEmptyDirectories(self):
+        count = 0
+        for root, dirs, files in os.walk(self.dst, topdown=False):
+            for name in dirs:
+                try:
+                    os.rmdir(os.path.join(root, name))
+                    count += 1
+                except:
+                    pass
+        return count
+            
     
 if __name__ == "__main__":
     raise Exception("Can't be run as Standalone!")

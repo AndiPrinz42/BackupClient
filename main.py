@@ -1,7 +1,6 @@
 from os import path as os_path
 import sys
 import backup
-import console
 
 def main():
     args = sys.argv
@@ -42,7 +41,7 @@ def interactiveInput():
     recursive = ""
 
     while(not os_path.exists(src)):
-        console.emptyLine()
+        emptyLine()
         src = input("Source path: ")
         print("Validating source path...                  ", end="\r")
         if not os_path.exists(src):
@@ -51,7 +50,7 @@ def interactiveInput():
     print("")
 
     while(not os_path.exists(dst) or src == dst):
-        console.emptyLine()
+        emptyLine()
         dst = input("Destination path: ")
         print("Validating destination path...             ", end="\r")
         if (not os_path.exists(dst) or src == dst):
@@ -60,7 +59,7 @@ def interactiveInput():
     print("")
 
     while(recursive != "y" and recursive != "n"):
-        console.emptyLine()
+        emptyLine()
         recursive = input("Recursive? (y/n): ")
         if recursive != "y" and recursive != "n":
             print("Invalid recursive argument.")
@@ -74,6 +73,8 @@ def interactiveInput():
 def help(args):
     print(f"Usage: {args[0]} <sourcePath> <destinationPath> <recursive?>")
 
+def emptyLine():
+    print(" " * 100, end="\r")
 
 if __name__ == "__main__":
     main()
